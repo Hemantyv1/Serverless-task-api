@@ -1,0 +1,198 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Serverless Task Management API with Auto-Scaling and Monitoring
+  Production-ready REST API using Lambda, API Gateway, and DynamoDB
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+  
+  AlertEmail:
+    Type: String
+    Description: Email address for CloudWatch alarms and SNS notifications
+    Default: your-email@example.com
+
+Globals:
+  Function:
+    Runtime: python3.11
+    MemorySize: 512
+    Timeout: 30
+    Environment:
+      Variables:
+        TASKS_TABLE_NAME: !Ref TasksTable
+        ENVIRONMENT: !Ref Environment
+    Tags:
+      Project: TaskManagementAPI
+      Environment: !Ref Environment
+
+Resources:
+  # ==================== DynamoDB Table ====================
+  TasksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${Environment}-tasks-table'
+      BillingMode: PAY_PER_REQUEST  # Auto-scaling with on-demand capacity
+      AttributeDefinitions:
+        - AttributeName: taskId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: taskId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${Environment}-tasks-table'
+        - Key: CostCenter
+          Value: Engineering
+
+  # ==================== API Gateway ====================
+  TaskApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub '${Environment}-task-api'
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          MetricsEnabled: true
+      Auth:
+        ApiKeyRequired: false
+
+  # ==================== Lambda Functions ====================
+  CreateTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-create-task'
+      CodeUri: src/handlers/
+      Handler: create_task.lambda_handler
+      Description: Create a new task
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TasksTable
+      Events:
+        CreateTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskApi
+            Path: /tasks
+            Method: POST
+
+  GetTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-get-task'
+      CodeUri: src/handlers/
+      Handler: get_task.lambda_handler
+      Description: Get task(s)
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TasksTable
+      Events:
+        GetSingleTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskApi
+            Path: /tasks/{taskId}
+            Method: GET
+        ListTasks:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskApi
+            Path: /tasks
+            Method: GET
+
+  UpdateTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-update-task'
+      CodeUri: src/handlers/
+      Handler: update_task.lambda_handler
+      Description: Update an existing task
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TasksTable
+      Events:
+        UpdateTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskApi
+            Path: /tasks/{taskId}
+            Method: PUT
+
+  DeleteTaskFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-delete-task'
+      CodeUri: src/handlers/
+      Handler: delete_task.lambda_handler
+      Description: Delete a task
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TasksTable
+      Events:
+        DeleteTask:
+          Type: Api
+          Properties:
+            RestApiId: !Ref TaskApi
+            Path: /tasks/{taskId}
+            Method: DELETE
+
+  # ==================== SNS Topic for Alarms ====================
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${Environment}-task-api-alerts'
+      DisplayName: Task API CloudWatch Alarms
+      Subscription:
+        - Endpoint: !Ref AlertEmail
+          Protocol: email
+
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${TaskApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${Environment}-task-api-url'
+  
+  TasksTableName:
+    Description: DynamoDB table name
+    Value: !Ref TasksTable
+    Export:
+      Name: !Sub '${Environment}-tasks-table-name'
+  
+  ApiId:
+    Description: API Gateway ID
+    Value: !Ref TaskApi
+    Export:
+      Name: !Sub '${Environment}-task-api-id'
+
