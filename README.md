@@ -1,24 +1,33 @@
 # Serverless Task Management API
 
-A production-ready, serverless REST API built with AWS Lambda, API Gateway, and DynamoDB.
+A production-ready serverless REST API for managing tasks, built with **AWS Lambda**, **API Gateway**, and **DynamoDB** and deployed using **AWS SAM**.
 
 ## Features
 
-- CRUD operations for task management
-- DynamoDB with on-demand capacity
-- API Gateway REST API
-- CloudWatch monitoring
-- Infrastructure as Code with AWS SAM
+- CRUD operations for tasks (create, read, update, delete)
+- DynamoDB table with on-demand capacity and a status index
+- API Gateway REST API with CORS enabled
+- CloudWatch logging, metrics, and alarms (via CloudFormation/SAM)
+- Infrastructure as Code with AWS SAM and GitHub Actions CI/CD
 
-## Prerequisites
+## Tech Stack
 
-- AWS Account
-- AWS CLI configured
+- **Language**: Python 3.11
+- **Compute**: AWS Lambda
+- **API Layer**: Amazon API Gateway (REST)
+- **Database**: Amazon DynamoDB (on‑demand, GSI on `status`/`createdAt`)
+- **IaC**: AWS SAM (`template.yaml`)
+- **CI/CD**: GitHub Actions (test, lint, deploy)
+
+## Getting Started
+
+### Prerequisites
+
+- AWS account
+- AWS CLI configured (`aws configure`)
 - AWS SAM CLI installed
 - Python 3.11+
 - Git
-
-## Quick Start
 
 ### 1. Clone and Install
 
@@ -34,17 +43,19 @@ pip install -r requirements.txt
 pytest tests/ -v
 ```
 
-### 3. Build
+### 3. Build the Application
 
 ```bash
 sam build
 ```
 
-### 4. Deploy
+### 4. Deploy to AWS
 
 ```bash
 sam deploy --guided
 ```
+
+Follow the prompts to choose a stack name, region, and environment (e.g. `dev`). After deployment, SAM will output the API Gateway URL.
 
 ## API Endpoints
 
