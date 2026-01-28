@@ -247,6 +247,20 @@ stack_name = "task-api-staging"
 parameter_overrides = "Environment=staging AlertEmail=your-email@example.com"
 ```
 
+### Optional: Enabling Authentication in Production
+
+For a simple demo, the API is deployed **without authentication** so it is easy to test. For a more realistic production setup you can:
+
+1. **Enable API keys on API Gateway**
+   - In `template.yaml`, set `Auth.ApiKeyRequired: true` on the `TaskApi` resource for the `prod` stack only (keep `dev` open for easy testing).
+   - Create a usage plan and API keys in the API Gateway console, then distribute keys to clients that should have access.
+
+2. **Add a Cognito authorizer (future enhancement)**
+   - Create a Cognito User Pool and configure an **Authorizer** on the `TaskApi`.
+   - Require a valid JWT on requests; the Lambda handlers can then read the user identity from the request context if needed.
+
+These changes can be layered on top of the existing template without modifying the handler code in `src/handlers/`, so the same codebase supports both open demos and authenticated production deployments.
+
 ## Troubleshooting
 
 ### Issue: "Unable to locate credentials"

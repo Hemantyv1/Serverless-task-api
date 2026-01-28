@@ -64,7 +64,8 @@ def lambda_handler(event, context):
         }
         
     except ClientError as e:
-        logger.error(f"DynamoDB error: {str(e)}")
+        # Log full exception details for internal debugging, but do not expose them to clients
+        logger.error("DynamoDB error while creating task", exc_info=True)
         return {
             'statusCode': 500,
             'headers': {
@@ -72,8 +73,7 @@ def lambda_handler(event, context):
                 'Access-Control-Allow-Origin': '*'
             },
             'body': json.dumps({
-                'error': 'Failed to create task',
-                'details': str(e)
+                'error': 'Failed to create task'
             })
         }
     except json.JSONDecodeError:

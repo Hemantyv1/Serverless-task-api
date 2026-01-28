@@ -153,6 +153,15 @@ TracingEnabled: true
 - ✅ Error handling with appropriate status codes
 - ✅ CORS headers in all responses
 
+#### Authentication (Optional Extension)
+
+- The API is intentionally left **unauthenticated for demo and portfolio use**, so it can be exercised directly from tools like curl and Postman.
+- The design assumes that production environments can enable one of the following without changing handler code:
+  - **API keys + usage plans** on API Gateway (per‑client rate limiting and metering).
+  - **Amazon Cognito user pools** with a JWT authorizer attached to the `TaskApi`.
+  - **IAM authorization** for internal or CLI-only access.
+- When auth is enabled at API Gateway, the Lambda handlers remain focused purely on business logic and trust the upstream identity/context provided in the event.
+
 ### 3. DynamoDB
 
 **Purpose**: NoSQL database for task storage
