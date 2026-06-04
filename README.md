@@ -55,6 +55,68 @@ sam build
 sam deploy --guided
 ```
 
+Follow the prompts to choose a stack name, region, and environment (e.g. `dev`). After deployment, SAM will output the API Gateway URL.
+
+## API Endpoints
+
+Base URL: `https://{api-id}.execute-api.{region}.amazonaws.com/{environment}`
+
+### Create Task
+```http
+POST /tasks
+Content-Type: application/json
+
+{
+  "title": "Task title",
+  "description": "Task description",
+  "priority": "high",
+  "status": "pending",
+  "dueDate": "2025-01-31",
+  "tags": ["tag1", "tag2"]
+}
+```
+
+### Get All Tasks
+```http
+GET /tasks
+```
+
+Query Parameters:
+- `status`: Filter by status (pending/in-progress/completed)
+- `priority`: Filter by priority (low/medium/high)
+
+### Get Single Task
+```http
+GET /tasks/{taskId}
+```
+
+### Update Task
+```http
+PUT /tasks/{taskId}
+Content-Type: application/json
+
+{
+  "status": "completed",
+  "priority": "low"
+}
+```
+
+### Delete Task
+```http
+DELETE /tasks/{taskId}
+```
+
+## Project Structure
+
+```
+serverless-task-api/
+├── src/handlers/          # Lambda functions
+├── tests/                 # Unit tests
+├── docs/                  # Documentation
+├── template.yaml          # AWS SAM template
+└── requirements.txt       # Python dependencies
+```
+
 ## Security & Reliability
 
 - **Security**
